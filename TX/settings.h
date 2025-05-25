@@ -1,8 +1,8 @@
 //Uncomment your board below - Remove the "//"" from in front of the "#define" - YOU MUST EDIT THIS
 //When choosing a board in Arduino IDE use bluepad32 for TX and regular esp32 for RX
 //
-#define Radiomaster_Ranger_Nano_ELRS_RCTX //2.4ghz elrs rctx, up to 1W, flash bin via elrs web interface and confirm popup, ESP32-D0WDQ6 V3(select board ESP32-WROOM-DA)/sx1281, sbus output: nano module bay pins on back of unit - far left pin(signal/data) is sbus out and second form the left pin (ground) is ground
-//#define Radiomaster_ER6_ELRS_RCRX //2.4ghz elrs rcrx, up to 100mW , flash bin via elrs web interface and confirm popup, esp32 pico d4 board/sx1281, sbus output: use a servo cable on Ch1: pwm signal(white) is sbus out and black is ground
+//#define Radiomaster_Ranger_Nano_ELRS_RCTX //2.4ghz elrs rctx, up to 1W, flash bin via elrs web interface and confirm popup, ESP32-D0WDQ6 V3(select board ESP32-WROOM-DA)/sx1281, sbus output: nano module bay pins on back of unit - far left pin(signal/data) is sbus out and second form the left pin (ground) is ground
+#define Radiomaster_ER6_ELRS_RCRX //2.4ghz elrs rcrx, up to 100mW , flash bin via elrs web interface and confirm popup, esp32 pico d4 board/sx1281, sbus output: use a servo cable on Ch1: pwm signal(white) is sbus out and black is ground
 //#define Jumper_AION_Nano_RCTX //2.4ghz elrs rctx, up to 500mW, flash bin via elrs web interface and confirm popup, esp32 pico d4 board/sx1281, sbus output: nano module bay pins on back of unit - far left pin(signal/data) is sbus out and second form the left pin (ground) is ground
 //#define Lilygo_T3_S3_SX1280_WITH_PA //2.4ghz board
 //#define Lilygo_T3_S3_SX1280_WITHOUT_PA //2.4ghz board

@@ -1,10 +1,15 @@
 //WARNING!
-//The below code is a proof of concept only!
+//The provided code is a proof of concept only!
 //
-//DO NOT flash this code onto a device which is operated in a region with duty cycle restrictions/dwell time restrictions/air time restrictions
+//DO NOT flash this code onto a device which operates on a frequency in a region with duty cycle restrictions/dwell time restrictions/air time restrictions
 //
-//The below code is intended to be ported to either FHSS with the ability to become more compliant with air time related restrictions
-//or ported to a device which operates on a frequency that does not have the same type of restrictions. 2.4ghz Lora?
+//Take the time to understand the laws and regulations in your area
+//It is your responsibility to ensure you are in compliance
+//
+//The provided code needs to be ported to FHSS before it could even be close to being compliant with any air time related restrictions
+//or ported to a device which operates on a frequency that does not have the same type of restrictions.
+//Perhaps the provided 2.4ghz examples may have less restrictions than the 915mhz examples?
+//I do not believe you can transmit using the 915mhz examples in any region. So please do your research and comply!
 //
 //As it currently stands this code will not comply with duty cycle restrictions/dwell time restrictions/air time restrictions and needs further work before actual use
 //The author(s) take no responsibility for your use or misuse of this code.
@@ -20,13 +25,14 @@
 //
 //Compatible Boards:
 //2.4ghz
-//Radiomaster_Ranger_Nano_ELRS_RCTX
-//Radiomaster_ER6_ELRS_RCRX
+//Radiomaster_Ranger_Nano_ELRS_RCTX (1W)
+//Radiomaster_ER6_ELRS_RCRX (100mW)
+//Jumper_AION_Nano_RCTX (500mW)
 //Lilygo_T3_S3_SX1280_WITH_PA
 //Lilygo_T3_S3_SX1280_WITHOUT_PA
 //915mhz
-//SeedStudio Xiao ESP32S3 plus WIO SX1262
-//Heltec WiFi LoRa 32 v3 (sx1262)
+//SeedStudio Xiao ESP32S3 plus WIO SX1262 //Do not use
+//Heltec WiFi LoRa 32 v3 (sx1262) //Do not use
 //
 //Required 3rd party board manager urls:
 //Official ESP32 package: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
