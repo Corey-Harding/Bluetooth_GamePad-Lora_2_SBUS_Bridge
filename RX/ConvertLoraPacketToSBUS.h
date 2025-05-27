@@ -90,18 +90,24 @@ void writeSBUS(SBUS_DATA my_data){
 }
 
 //based on readAxis by johnwasser:https://forum.arduino.cc/t/adding-a-dead-zone-to-a-analog-imput-on-arduino-leonardo/662508/5
-int32_t readAxis(int8_t Axis_Packet, int AXIS_LOW, int AXIS_HIGH) {
+int32_t readAxis(int16_t Axis_Packet, int AXIS_LOW_PACKET, int AXIS_HIGH_PACKET, int AXIS_LOW_PWM, int AXIS_HIGH_PWM, int AXIS_INVERTED) {
   const int DEADZONE_LOW  = 0-DEADZONE;
   const int DEADZONE_HIGH = 0+DEADZONE;
-  const int AXIS_MID = ( (AXIS_LOW/2) + (AXIS_HIGH/2) );
+  const int AXIS_MID_PWM = ( (AXIS_LOW_PWM/2) + (AXIS_HIGH_PWM/2) );
+  if (AXIS_INVERTED == 1) {
+    int LOW_SWAP = AXIS_HIGH_PACKET;
+    int HIGH_SWAP = AXIS_LOW_PACKET;
+    AXIS_HIGH_PACKET = HIGH_SWAP;
+    AXIS_LOW_PACKET = LOW_SWAP;
+  }
   if (Axis_Packet < DEADZONE_LOW) {
-    return map(Axis_Packet ,-128, DEADZONE_LOW, AXIS_LOW, AXIS_MID);
+    return map(Axis_Packet , AXIS_LOW_PACKET, AXIS_HIGH_PACKET, AXIS_LOW_PWM, AXIS_HIGH_PWM);
   }
   else if (Axis_Packet > DEADZONE_HIGH){
-    return map(Axis_Packet, DEADZONE_HIGH, 127, AXIS_MID, AXIS_HIGH);
+    return map(Axis_Packet, AXIS_LOW_PACKET, AXIS_HIGH_PACKET, AXIS_LOW_PWM, AXIS_HIGH_PWM);
   }
   else {
-    return AXIS_MID;
+    return AXIS_MID_PWM;
   }
 }
 
@@ -113,17 +119,27 @@ void ConvertLoraPacketToSBUS(byte dataPacket[]) {
   int8_t RxPacket = dataPacket[2];
   int8_t RyPacket = dataPacket[3];
 
-  //Map Joystick Axis to SBUS Values
-  //Explanation: readAxis(Axis_Packet, LOWEST_PWM_VALUE_USED, HIGHEST_PWM_VALUE_USED)
-  int32_t Lx = readAxis(LxPacket, 432, 1552);
-  int32_t Ly = readAxis(-(LyPacket), 192, 1792); //This value is inverted on Unitree Go2, this makes joystick not inverted
-  int32_t Rx = readAxis(RxPacket, 432, 1552);
-  int32_t Ry = readAxis(RyPacket, 432, 1552);
-  //No deadzone filtering with this method
-  //int32_t Lx = map(LxPacket, -128, 127, 432, 1552); //Low: -128 Axis Value = 432 PWM, High: 127 Axis Value = 1552 PWM
-  //int32_t Ly = map(LyPacket, 127, -128, 192, 1792); //These are the expected values required for this particular application(Unitree Go2 Robot)
-  //int32_t Rx = map(RxPacket, -128, 127, 432, 1552); //For other RC applications these values will likely be different
-  //int32_t Ry = map(RyPacket, -128, 127, 432, 1552);
+  #if PACKET_LENGTH == 8 //10bit resolution joystick
+    int8_t Axis10bitPacket = dataPacket[7];
+    //Reconstruct Packets into 10bit resolution joystick data (-512 to 511)
+    int16_t Lx10 = LxPacket<<2|bitRead(Axis10bitPacket,7)<<1|bitRead(Axis10bitPacket,6);
+    int16_t Ly10 = LyPacket<<2|bitRead(Axis10bitPacket,5)<<1|bitRead(Axis10bitPacket,4);
+    int16_t Rx10 = RxPacket<<2|bitRead(Axis10bitPacket,3)<<1|bitRead(Axis10bitPacket,2);
+    int16_t Ry10 = RyPacket<<2|bitRead(Axis10bitPacket,1)<<1|bitRead(Axis10bitPacket,0);
+    //Map Joystick Axis to SBUS Values
+    //Explanation: readAxis(Axis_Packet, LOWEST_PACKET_VALUE_USED, HIGHEST_PACKET_VALUE_USED, LOWEST_PWM_VALUE_USED, HIGHEST_PWM_VALUE_USED, AXIS_INVERTED)
+    int32_t Lx = readAxis(Lx10, -512, 511, 432, 1552, 0);
+    int32_t Ly = readAxis(Ly10, -512, 511, 192, 1792, 1); //This value is inverted on Unitree Go2, this makes joystick not inverted
+    int32_t Rx = readAxis(Rx10, -512, 511, 432, 1552, 0);
+    int32_t Ry = readAxis(Ry10, -512, 511, 432, 1552, 0);
+  #else //8bit resolution joystick
+    //Map Joystick Axis to SBUS Values
+    //Explanation: readAxis(Axis_Packet, LOWEST_PACKET_VALUE_USED, HIGHEST_PACKET_VALUE_USED, LOWEST_PWM_VALUE_USED, HIGHEST_PWM_VALUE_USED, AXIS_INVERTED)
+    int32_t Lx = readAxis(LxPacket, -128, 127, 432, 1552, 0);
+    int32_t Ly = readAxis(LyPacket, -128, 127, 192, 1792, 1); //This value is inverted on Unitree Go2, this makes joystick not inverted
+    int32_t Rx = readAxis(RxPacket, -128, 127, 432, 1552, 0);
+    int32_t Ry = readAxis(RyPacket, -128, 127, 432, 1552, 0);
+  #endif
 
   //Extract Button States from Packet
   uint8_t Buttons_Byte1 = dataPacket[4];
@@ -154,30 +170,65 @@ void ConvertLoraPacketToSBUS(byte dataPacket[]) {
   L2 = (Buttons_Byte2 & 0b01000000) != 0;
   R2 = (Buttons_Byte2 & 0b10000000) != 0;
 
+  #if PACKET_LENGTH >=7
+    //Extract All Button States from Buttons_Byte3
+    uint8_t Buttons_Byte3 = dataPacket[6];
+    bool L3, R3;
+    L3 = (Buttons_Byte3 & 0b00000001) != 0;
+    R3 = (Buttons_Byte3 & 0b00000010) != 0;
+  #endif
+
   //Show axis values and button states via the serial console
   #if defined(DEBUG_ENABLED)
-    Serial.println(
-      "Lx: "+String(Lx)+" ,\
-      Ly: "+String(Ly)+" ,\
-      Rx: "+String(Rx)+" ,\
-      Ry: "+String(Ry)+" ,\
-      DPAD_UP: "+String(DPAD_UP)+" ,\
-      DPAD_DOWN: "+String(DPAD_DOWN)+" ,\
-      DPAD_RIGHT: "+String(DPAD_RIGHT)+" ,\
-      DPAD_LEFT: "+String(DPAD_LEFT)+" ,\
-      XBOX: "+String(XBOX)+" ,\
-      START: "+String(START)+" ,\
-      SELECT: "+String(SELECT)+" ,\
-      SHARE: "+String(SHARE)+" ,\
-      A: "+String(A)+" ,\
-      B: "+String(B)+" ,\
-      X: "+String(X)+" ,\
-      Y: "+String(Y)+" ,\
-      L1: "+String(L1)+" ,\
-      R1: "+String(R1)+" ,\
-      L2: "+String(L2)+" ,\
-      R2: "+String(R2)
-    );
+    #if PACKET_LENGTH >= 7
+      Serial.println(
+        "Lx: "+String(Lx)+" ,\
+        Ly: "+String(Ly)+" ,\
+        Rx: "+String(Rx)+" ,\
+        Ry: "+String(Ry)+" ,\
+        DPAD_UP: "+String(DPAD_UP)+" ,\
+        DPAD_DOWN: "+String(DPAD_DOWN)+" ,\
+        DPAD_RIGHT: "+String(DPAD_RIGHT)+" ,\
+        DPAD_LEFT: "+String(DPAD_LEFT)+" ,\
+        XBOX: "+String(XBOX)+" ,\
+        START: "+String(START)+" ,\
+        SELECT: "+String(SELECT)+" ,\
+        SHARE: "+String(SHARE)+" ,\
+        A: "+String(A)+" ,\
+        B: "+String(B)+" ,\
+        X: "+String(X)+" ,\
+        Y: "+String(Y)+" ,\
+        L1: "+String(L1)+" ,\
+        R1: "+String(R1)+" ,\
+        L2: "+String(L2)+" ,\
+        R2: "+String(R2)+" ,\
+        L3: "+String(L3)+" ,\
+        R3: "+String(R3)
+      );
+    #else
+      Serial.println(
+        "Lx: "+String(Lx)+" ,\
+        Ly: "+String(Ly)+" ,\
+        Rx: "+String(Rx)+" ,\
+        Ry: "+String(Ry)+" ,\
+        DPAD_UP: "+String(DPAD_UP)+" ,\
+        DPAD_DOWN: "+String(DPAD_DOWN)+" ,\
+        DPAD_RIGHT: "+String(DPAD_RIGHT)+" ,\
+        DPAD_LEFT: "+String(DPAD_LEFT)+" ,\
+        XBOX: "+String(XBOX)+" ,\
+        START: "+String(START)+" ,\
+        SELECT: "+String(SELECT)+" ,\
+        SHARE: "+String(SHARE)+" ,\
+        A: "+String(A)+" ,\
+        B: "+String(B)+" ,\
+        X: "+String(X)+" ,\
+        Y: "+String(Y)+" ,\
+        L1: "+String(L1)+" ,\
+        R1: "+String(R1)+" ,\
+        L2: "+String(L2)+" ,\
+        R2: "+String(R2)
+      );
+    #endif
   #endif
 
 

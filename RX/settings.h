@@ -20,11 +20,21 @@ AsyncWebServer server(80);
 //Uncomment to enable debug messages via serial monitor
 #define DEBUG_ENABLED
 
-//Define Packet Length
-#define PACKET_LENGTH     6
+//All of the main settings below must be the same on the RX/TX for the rc link to work correctly except for the chosen hardware/pinout
+//Smaller bandwidth and larger spreading factor result in longer range but slower packet rate
+//Larger bandwidth and smaller spreading factor result in shorter range but faster packet rate
 
-//Define deadzone for joystick, typical .05 deadzone would be figured using 128*.05 = 6.4, but I am bumping it up to 8
-#define DEADZONE          8
+//Define Packet Length in Bytes - Larger packet length allows higher resolution joysticks and includes l3/r3 at the expense of slower packet rate
+#define PACKET_LENGTH     6 //8bit Resolution Joysticks, All buttons except L3/R3
+//#define PACKET_LENGTH     7 //8bit Resolution Joysticks, All buttons including L3/R3
+//#define PACKET_LENGTH     8 //10bit Resolution Joysticks, All buttons including L3/R3
+
+//Define deadzone for joystick
+#if PACKET_LENGTH < 8 //8bit joystick deadzone
+  #define DEADZONE          8 //for 8 bit resolution typical .05 deadzone would be figured using 128*.05 = 6.4, but I am bumping it up to 8
+#elif PACKET_LENGTH == 8 //10bit joystick deadzone
+  #define DEADZONE          32 //for 10 bit resolution typical .05 deadzone would be figured using 512*.05 = 25.6, but I am bumping it up to 32
+#endif
 
 //2.4ghz modules settings sx1281
 #if defined(Radiomaster_ER6_ELRS_RCRX) || defined(Radiomaster_Ranger_Nano_ELRS_RCTX) || defined(Jumper_AION_Nano_RCTX)
