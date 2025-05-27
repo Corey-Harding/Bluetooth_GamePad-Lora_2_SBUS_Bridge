@@ -71,8 +71,10 @@ int8_t Lx = 0x00;
 int8_t Ly = 0x00;
 int8_t Rx = 0x00;  
 int8_t Ry = 0x00;
+int8_t Axis10bit = 0x00;
 uint8_t combinedButtons = 0x00;
 uint8_t buttonsState = 0x00;
+uint8_t buttonsState2 = 0x00;
 
 // this function is called when a complete packet
 // is transmitted by the module
@@ -140,11 +142,23 @@ void processGamepad(ControllerPtr ctl) {
     //PacketRate in "hz" timer
     long currentMillis = millis();
 
+    //Grab Full 10bit Resolution Joystick Axis
+    int tenLx = ctl->axisX();
+    int tenLy = ctl->axisY();
+    int tenRx = ctl->axisRX();
+    int tenRy = ctl->axisRY();
     // JoyStick States: Drop axis from 10bit resolution to 8bit resolution
-    Lx = (ctl->axisX() >> 2); 
-    Ly = (ctl->axisY() >> 2);
-    Rx = (ctl->axisRX() >> 2);  
-    Ry = (ctl->axisRY() >> 2);
+    Lx = (tenLx >> 2); 
+    Ly = (tenLy >> 2);
+    Rx = (tenRx >> 2);  
+    Ry = (tenRy >> 2);
+    #if  PACKET_LENGTH == 8 //Create byte containing the rest of the 10bit resolution joystick data
+      int8_t Lx2 = (tenLx); 
+      int8_t Ly2 = (tenLy);
+      int8_t Rx2 = (tenRx);  
+      int8_t Ry2 = (tenRy);
+      Axis10bit = ((tenLx&0b00000011)<<6 | (tenLy&0b00000011)<<4 | (tenRx&0b00000011)<<2 | (tenRy&0b00000011));
+    #endif
 
     // Button States:
     uint8_t dpadState = ctl->dpad(); //4 bits
@@ -152,32 +166,69 @@ void processGamepad(ControllerPtr ctl) {
     // Combine the above buttons
     combinedButtons = (dpadState<<4) | (miscState);
     buttonsState = ctl->buttons();
+    //Add L3/R3 to an extra packet(only transmitted when packet length is set to 7 or greater)
+    buttonsState2 = ctl->thumbR()<<1 | ctl->thumbL();
 
     //Show axis values and button states via the serial console
     #if defined(DEBUG_ENABLED)
-      Serial.println(
-        "Lx: "+String(Lx)+" ,\
-        Ly: "+String(Ly)+" ,\
-        Rx: "+String(Rx)+" ,\
-        Ry: "+String(Ry)+" ,\
-        DPAD: "+String(ctl->dpad())+" ,\
-        XBOX: "+String(ctl->miscSystem())+" ,\
-        START: "+String(ctl->miscStart())+" ,\
-        SELECT: "+String(ctl->miscSelect())+" ,\
-        SHARE: "+String(ctl->miscCapture())+" ,\
-        A: "+String(ctl->a())+" ,\
-        B: "+String(ctl->b())+" ,\
-        X: "+String(ctl->x())+" ,\
-        Y: "+String(ctl->y())+" ,\
-        L1: "+String(ctl->l1())+" ,\
-        R1: "+String(ctl->r1())+" ,\
-        L2: "+String(ctl->l2())+" ,\
-        R2: "+String(ctl->r2())
-      );
+      #if  PACKET_LENGTH == 8
+        Serial.println(
+          "Lx: "+String(tenLx)+" ,\
+          Ly: "+String(tenLy)+" ,\
+          Rx: "+String(tenRx)+" ,\
+          Ry: "+String(tenRy)+" ,\
+          DPAD: "+String(ctl->dpad())+" ,\
+          XBOX: "+String(ctl->miscSystem())+" ,\
+          START: "+String(ctl->miscStart())+" ,\
+          SELECT: "+String(ctl->miscSelect())+" ,\
+          SHARE: "+String(ctl->miscCapture())+" ,\
+          A: "+String(ctl->a())+" ,\
+          B: "+String(ctl->b())+" ,\
+          X: "+String(ctl->x())+" ,\
+          Y: "+String(ctl->y())+" ,\
+          L1: "+String(ctl->l1())+" ,\
+          R1: "+String(ctl->r1())+" ,\
+          L2: "+String(ctl->l2())+" ,\
+          R2: "+String(ctl->r2())+" ,\
+          L3: "+String(ctl->thumbL())+" ,\
+          R3: "+String(ctl->thumbR())
+        );
+      #else
+        Serial.println(
+          "Lx: "+String(Lx)+" ,\
+          Ly: "+String(Ly)+" ,\
+          Rx: "+String(Rx)+" ,\
+          Ry: "+String(Ry)+" ,\
+          DPAD: "+String(ctl->dpad())+" ,\
+          XBOX: "+String(ctl->miscSystem())+" ,\
+          START: "+String(ctl->miscStart())+" ,\
+          SELECT: "+String(ctl->miscSelect())+" ,\
+          SHARE: "+String(ctl->miscCapture())+" ,\
+          A: "+String(ctl->a())+" ,\
+          B: "+String(ctl->b())+" ,\
+          X: "+String(ctl->x())+" ,\
+          Y: "+String(ctl->y())+" ,\
+          L1: "+String(ctl->l1())+" ,\
+          R1: "+String(ctl->r1())+" ,\
+          L2: "+String(ctl->l2())+" ,\
+          R2: "+String(ctl->r2())+" ,\
+          L3: "+String(ctl->thumbL())+" ,\
+          R3: "+String(ctl->thumbR())
+        );
+      #endif
     #endif
 
     //Pack data into a packet to be transmitted
-    byte dataPacket[] = {Lx, Ly, Rx, Ry, combinedButtons, buttonsState};
+    #if PACKET_LENGTH == 6
+      //8bit Joystick Resolution, not including L3/R3
+      byte dataPacket[] = {Lx, Ly, Rx, Ry, combinedButtons, buttonsState};
+    #elif  PACKET_LENGTH == 7
+      //8bit Joystick Resolution, including L3/R3
+      byte dataPacket[] = {Lx, Ly, Rx, Ry, combinedButtons, buttonsState, buttonsState2};
+    #elif  PACKET_LENGTH == 8
+      //10bit Joystick Resolution, including L3/R3
+      byte dataPacket[] = {Lx, Ly, Rx, Ry, combinedButtons, buttonsState, buttonsState2, Axis10bit};
+    #endif
     //Or send as a string(Not as efficient)
     //String dataPacketStr = String(String(Lx)+","+String(Ly)+","+String(Rx)+","+String(Ry)+","+String(dpadState)+","+String(miscState)+","+String(buttonsState));
 
