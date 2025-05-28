@@ -4,8 +4,8 @@
 //#define Radiomaster_Ranger_Nano_ELRS_RCTX //2.4ghz elrs rctx, up to 1W, flash bin via elrs web interface and confirm popup, ESP32-D0WDQ6 V3(select board ESP32-WROOM-DA)/sx1281, sbus output: nano module bay pins on back of unit - looking at the rear of the module: far left pin(signal/data) is sbus out and second from the left pin (ground) is ground
 #define Radiomaster_ER6_ELRS_RCRX //2.4ghz elrs rcrx, up to 100mW , flash bin via elrs web interface and confirm popup, select esp32 pico d4 board/sx1281, sbus output: use a servo cable on Ch1: pwm signal(white) is sbus out and black is ground
 //#define Jumper_AION_Nano_RCTX //2.4ghz elrs rctx, up to 500mW, flash bin via elrs web interface and confirm popup, esp32 pico d4(select esp32 pico d4 and hold down button when connecting via usb to upload, I also had to flash bootloader for some reason)/sx1281(e28-2g4m28s), sbus output: nano module bay pins on back of unit - looking at the rear of the module: far left pin(signal/data) is sbus out and second from the left pin (ground) is ground - must be powered via nano port vbat(2s) on pin 3rd from the left, otherwise power via usb will cause a brownout
-//#define Lilygo_T3_S3_SX1280_WITH_PA //2.4ghz board
-//#define Lilygo_T3_S3_SX1280_WITHOUT_PA //2.4ghz board
+//#define Lilygo_T3_S3_SX1280_WITH_PA //2.4ghz board choose esp32s3 dev module as board
+//#define Lilygo_T3_S3_SX1280_WITHOUT_PA //2.4ghz board choose esp32s3 dev module as board
 //#define GENERIC_MODULE //User configured
 //#define Xiao_ESP32S3_and_WIO_SX1262 //915mhz board, WARNING Do not use: Need to implement fhss and additional code to be compliant in most regions
 //#define Heltec_WiFi_LoRa_32_V3 //915mhz board, WARNING Do not use: Need to implement fhss and additional code to be compliant in most regions
@@ -51,11 +51,16 @@ AsyncWebServer server(80);
   //Pin configurations - DO NOT EDIT THIS
   #if defined(Radiomaster_ER6_ELRS_RCRX)
     #define CUSTOM_SPI_PINS
+    #define USE_HSPI
     #define CUSTOM_MISO       33
     #define CUSTOM_MOSI       32
     #define CUSTOM_CS         27
     #define CUSTOM_SCK        25
-    #define CUSTOM_SPI_FREQ   74880
+    #if defined(USE_HSPI)
+      #define CUSTOM_SPI_FREQ   200000
+    #else
+      #define CUSTOM_SPI_FREQ   74880
+    #endif
     #define CUSTOM_SPI_BITORDER MSBFIRST
     #define CUSTOM_SPI_MODE   SPI_MODE0
     #define PIN_NSS           27 //CS PIN
@@ -76,11 +81,16 @@ AsyncWebServer server(80);
   //Pin configurations - DO NOT EDIT THIS
   #if defined(Radiomaster_Ranger_Nano_ELRS_RCTX)
     #define CUSTOM_SPI_PINS
+    #define USE_HSPI
     #define CUSTOM_MISO       19
     #define CUSTOM_MOSI       23
     #define CUSTOM_CS         4
     #define CUSTOM_SCK        18
-    #define CUSTOM_SPI_FREQ   74880
+    #if defined(USE_HSPI)
+      #define CUSTOM_SPI_FREQ   200000
+    #else
+      #define CUSTOM_SPI_FREQ   74880
+    #endif
     #define CUSTOM_SPI_BITORDER MSBFIRST
     #define CUSTOM_SPI_MODE   SPI_MODE0
     #define PIN_NSS           4 //CS PIN
@@ -94,16 +104,21 @@ AsyncWebServer server(80);
     #define RADIO_RX_PIN      32 //Enable RF Switch
     #define FAN_ENABLE        27 //Fan enable pin
     //Override TX Power setting above for Radiomaster_ER6_ELRS_RCRX
-    #define OUTPUT_POWER_DBM  2 //WARNING! For this module do not change output power above 6 or you may burn up the PA
+    #define OUTPUT_POWER_DBM  6 //WARNING! For this module do not change output power above 6 or you may burn up the PA
   #endif
   //Pin configurations - DO NOT EDIT THIS
   #if defined(Jumper_AION_Nano_RCTX)
     #define CUSTOM_SPI_PINS
+    #define USE_HSPI
     #define CUSTOM_MISO       19
     #define CUSTOM_MOSI       23
     #define CUSTOM_CS         5
     #define CUSTOM_SCK        18
-    #define CUSTOM_SPI_FREQ   74880
+    #if defined(USE_HSPI)
+      #define CUSTOM_SPI_FREQ   200000
+    #else
+      #define CUSTOM_SPI_FREQ   74880
+    #endif
     #define CUSTOM_SPI_BITORDER MSBFIRST
     #define CUSTOM_SPI_MODE   SPI_MODE0
     #define PIN_NSS           5 //CS PIN
@@ -125,7 +140,7 @@ AsyncWebServer server(80);
 #if defined(Lilygo_T3_S3_SX1280_WITH_PA) || defined(Lilygo_T3_S3_SX1280_WITHOUT_PA)
   #define USING_SX1280
   // Radio Configuration for 2.4ghz modules - YOU MAY EDIT THIS
-  #define FREQ                2450.0
+  #define FREQ                2401.0
   #define BANDWIDTH           812.5 //options: 812.5bw/11 406.25bw/10sf 203.125bw/9sf
   #define SPREADING_FACTOR    11 //options: 812.5bw/11 406.25bw/10sf 203.125bw/9sf
   #define CODING_RATE_4X      5
@@ -135,6 +150,16 @@ AsyncWebServer server(80);
   //
   //Pin configurations - DO NOT EDIT THIS
   #if defined(Lilygo_T3_S3_SX1280_WITH_PA) || defined(Lilygo_T3_S3_SX1280_WITHOUT_PA)
+    #define CUSTOM_SPI_PINS
+    #define USE_HSPI //Use HSPI NO VSPI on esp32s3 dev
+    #define LILYGO_T3_S3
+    #define CUSTOM_MISO       3
+    #define CUSTOM_MOSI       6
+    #define CUSTOM_CS         7
+    #define CUSTOM_SCK        5
+    #define CUSTOM_SPI_FREQ   200000
+    #define CUSTOM_SPI_BITORDER MSBFIRST
+    #define CUSTOM_SPI_MODE   SPI_MODE0
     #define PIN_NSS           7 //CS PIN
     #define PIN_DIO1          9 //DIO1 PIN
     #define PIN_NRST          8 //RST PIN
@@ -193,7 +218,7 @@ AsyncWebServer server(80);
   //#define USING_SX1262 
   //
   // Radio Configuration for 2.4ghz modules - YOU MAY EDIT THIS
-  #define FREQ                2450.0
+  #define FREQ                2401.0
   #define BANDWIDTH           812.5 //options: bw:812.5/sf:11_or_12(slower) bw:406.25/sf:10_or_11(slower) bw:203.125/sf:9_or_10(slower)
   #define SPREADING_FACTOR    11 //options: bw:812.5/sf:11_or_12(slower) bw:406.25/sf:10_or_11(slower) bw:203.125/sf:9_or_10(slower)
   #define CODING_RATE_4X      5
@@ -214,7 +239,11 @@ AsyncWebServer server(80);
 #endif
 
 #if defined(CUSTOM_SPI_PINS)
-  SPIClass spi(VSPI);
+  #if defined(USE_HSPI)
+    SPIClass spi(HSPI);
+  #else
+    SPIClass spi(VSPI);
+  #endif
   SPISettings spiSettings(CUSTOM_SPI_FREQ, CUSTOM_SPI_BITORDER, CUSTOM_SPI_MODE);
 #endif
 

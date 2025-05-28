@@ -118,6 +118,13 @@ void setup() {
   #if defined(CUSTOM_SPI_PINS)
     spi.begin(CUSTOM_SCK, CUSTOM_MISO, CUSTOM_MOSI, CUSTOM_CS);
   #endif
+  #if defined(LILYGO_T3_S3)
+      //SPI BUS SHARED WITH SD CARD
+      pinMode(CUSTOM_CS, OUTPUT);
+      digitalWrite(CUSTOM_CS, HIGH);
+      pinMode(PIN_NRST, OUTPUT);
+      digitalWrite(PIN_NRST, HIGH);
+  #endif
 
   // initialize radio with default settings
   #if defined(DEBUG_ENABLED)
